@@ -86,21 +86,7 @@ function findMoreThanRestInWord(current, text, index = 0) {
   if (parseInt(current) < parseInt(head)) return index;
   return findMoreThanRestInWord(current, rest.join(""), index + 1);
 }
-function isNextHasSameValue(current, text, index = 0) {
-  if (text.length == 0) return null;
-  const [head, ...rest] = text.split("");
-  if (parseInt(current) == parseInt(head)) return index;
-  return findMoreThanRestInWord(current, rest.join(""), index + 1);
-}
-function findMax(text) {
-  return Math.max(...text.map((x) => parseInt(x))) || 0;
-}
-function group(text) {
-  if (text.length == 0) return [];
-  const [head, ...rest] = text.split("");
-  if (head == rest[0]) return group(rest.join(""));
-  return [head, ...group(rest.join(""))];
-}
+
 function wantToPick(len) {
   return function selectiveMostWord(word, collected = []) {
     if (collected.length == len) return collected;
@@ -130,13 +116,12 @@ function wantToPick(len) {
 }
 
 console.log(
-  text
+  fileContent
     .trim()
     .split("\n")
     .map((x) => x.trim())
-    .map((x) => [x, wantToPick(2)(x).join("")])
+    .map((x) => wantToPick(12)(x).join(""))
     .reduce((x, y) => {
-      console.log(y);
-      return x + parseInt(y[1]);
+      return x + parseInt(y);
     }, 0)
 );
