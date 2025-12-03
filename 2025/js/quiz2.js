@@ -1,6 +1,3 @@
-const testInput = `11-22,95-115,998-1012,1188511880-1188511890,222220-222224,
-1698522-1698528,446443-446449,38593856-38593862,565653-565659,
-824824821-824824827,2121212118-2121212124`;
 function cleanText(text) {
   return text.trim();
 }
@@ -17,23 +14,25 @@ function mapToId(line) {
   return { first, last };
 }
 
-function isLeadingWithZeroes(text) {
-  return !text.startsWith("0");
+function checkedStringWithIndex(text, index) {
+  const head = text.slice(0, index);
+  const tail = text.slice(index, text.length);
+  return [head, tail];
 }
 
-function isDuplicate(index, word) {
+function isWordHasInvalidPattern(index, word) {
   if (index == word.length) return false;
-  const head = word.slice(0, index);
-  const tail = word.slice(index, word.length);
-  if (head == tail) return true;
-  const isHaveSamePattern = word.replaceAll(head, "") == "";
-  if (isHaveSamePattern) return true;
-  return isDuplicate(index + 1, word);
+  const [pattern] = checkedStringWithIndex(word, index);
+  // if (isHalfRepeatPattern(pattern, tail)) return true;
+  if (isStrCompleteRepeatPattern(word, pattern)) return true;
+  return isWordHasInvalidPattern(index + 1, word);
 }
 
-function onlyInvalidNumber(num) {
-  return isDuplicate(0, num);
-}
+const isHalfRepeatPattern = (pattern, str) => str == pattern;
+const isStrCompleteRepeatPattern = (str, pattern) =>
+  str.replaceAll(pattern, "") == "";
+const isLeadingWithZeroes = (text) => !text.startsWith("0");
+const onlyInvalidNumber = (num) => isWordHasInvalidPattern(0, num);
 
 function getRangeNumber({ first, last }) {
   return Array.from(
@@ -56,14 +55,13 @@ function processTextToInvalidIds(text) {
 function summarizeInvelidId(arr) {
   return arr.reduce((sum, str) => sum + parseInt(str), 0);
 }
+const testInput = `11-22,95-115,998-1012,1188511880-1188511890,222220-222224,
+1698522-1698528,446443-446449,38593856-38593862,565653-565659,
+824824821-824824827,2121212118-2121212124`;
+// console.log(processTextToInvalidIds(fileURLToPath));
+
 const fs = require("fs");
 const filePath = "../quiz/day_2/input.txt";
 const fileContent = fs.readFileSync(filePath, "utf-8");
-console.log(summarizeInvelidId(processTextToInvalidIds(fileContent)));
-function a(text) {
-  return function b() {
-    return text + 1;
-  };
-}
-
-console.log(a("adad")());
+console.log(summarizeInvelidId(processTextToInvalidIds(testInput)));
+// console.log(summarizeInvelidId(processTextToInvalidIds(fileContent)));
