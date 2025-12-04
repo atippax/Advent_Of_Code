@@ -77,7 +77,7 @@ function splitIner(list, x1, x2) {
     return [head, body, tail];
   });
 }
-function doAction(target) {
+function doAction(value, fn) {
   const newState = target.map((d) => {
     return d.map((f) => {
       return fn(f);
@@ -92,14 +92,32 @@ function splitTo3Part(list, first, last) {
   const tail = list.slice(last.y + 1);
   return [head, splitIner(body, first.x, last.x), tail];
 }
+// console.log(
+//   action(
+//     createADimension(5, 5),
+//     thought([1, 1], [2, 2], (e) => true)
+//   )
+// );
+// return;
 function action(state, actionList) {
   const first = actionList[0][0];
   const last =
     actionList[actionList.length - 1][
       actionList[actionList.length - 1].length - 1
     ];
-  const [head, [_h, targets, _t], tail] = splitTo3Part(state, first, last);
-  return [head, [_h, actionList.reduce((x) => doAction(y.fn), []), _t], tail];
+  const [head, body, tail] = splitTo3Part(state, first, last);
+  const d = body.map((d, y) => {
+    const [_h, _b, _l] = d;
+    const result = [..._h, ..._b.map((h, x) => actionList[y][x].fn(h)), ..._l];
+    return result;
+  });
+  const f = [...head, ...d, ...tail];
+  return f;
+  const computed = targets.map((arr, y) =>
+    arr.map((data, x) => actionList[y][x].fn(data))
+  );
+  const result = [...head, [..._h, ...computed, ..._t], ...tail];
+  return result;
   return actionList.reduce((stateOne, x) => {
     return x.reduce((_state, y) => {
       return doActionAtTarget(_state, [y.x, y.y], y.fn);
@@ -148,19 +166,48 @@ function getThoughtRange(str) {
 }
 // console.log(getThoughtRange(removeToggle(text)));
 const state = createADimension(1000, 1000);
+const fs = require("fs");
+const filePath = "../quiz/day_6/input.txt";
+const fileContent = fs.readFileSync(filePath, "utf-8");
 // const text = "toggle 461,550 through 564,900";
+const result = fileContent.split("\n").reduce(
+  ({ state, light }, command) => {
+    console.log(command);
+    const newState = actionWithTextCommand(state, command);
+    return {
+      state: newState,
+      light:
+        light +
+        newState.reduce((sumx, x) => {
+          return x.reduce((sumy, y) => {
+            if (y) return 1 + sumy;
+            return sumy;
+          }, sumx);
+        }, 0),
+    };
+  },
+  { state, light: 0 }
+);
 console.log(
-  actionWithTextCommand(
-    actionWithTextCommand(
-      actionWithTextCommand(state, "turn on 0,0 through 999,999"),
-      "toggle 0,0 through 999,0"
-    ),
-    "turn off 499,499 through 500,500"
-  ).reduce((sumx, x) => {
+  result.state.reduce((sumx, x) => {
     return x.reduce((sumy, y) => {
       if (y) return 1 + sumy;
       return sumy;
     }, sumx);
   }, 0)
 );
+// console.log(
+//   actionWithTextCommand(
+//     actionWithTextCommand(
+//       actionWithTextCommand(state, "turn on 0,0 through 999,999"),
+//       "toggle 0,0 through 999,0"
+//     ),
+//     "turn off 499,499 through 500,500"
+//   ).reduce((sumx, x) => {
+//     return x.reduce((sumy, y) => {
+//       if (y) return 1 + sumy;
+//       return sumy;
+//     }, sumx);
+//   }, 0)
+// );
 // console.table(thought([1, 2], [2, 5], 0));
