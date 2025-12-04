@@ -1,6 +1,6 @@
-function createADimension(x, y) {
+function createADimension(x, y, value = false) {
   return Array.from({ length: y }, () =>
-    Array.from({ length: x }, () => false)
+    Array.from({ length: x }, () => value)
   );
 }
 
@@ -69,8 +69,37 @@ function doActionAtTarget(state, target, fn) {
   });
   return newState;
 }
-
+function splitIner(list, x1, x2) {
+  return list.map((l) => {
+    const head = l.slice(0, x1);
+    const body = l.slice(x1, x2 + 1);
+    const tail = l.slice(x2 + 1);
+    return [head, body, tail];
+  });
+}
+function doAction(target) {
+  const newState = target.map((d) => {
+    return d.map((f) => {
+      return fn(f);
+    });
+  });
+  return newState;
+}
+function splitTo3Part(list, first, last) {
+  const head = list.slice(0, first.y);
+  //   const [_h, computed, _l] = splitIner(body, first.x, last.x);
+  const body = list.slice(first.y, last.y + 1);
+  const tail = list.slice(last.y + 1);
+  return [head, splitIner(body, first.x, last.x), tail];
+}
 function action(state, actionList) {
+  const first = actionList[0][0];
+  const last =
+    actionList[actionList.length - 1][
+      actionList[actionList.length - 1].length - 1
+    ];
+  const [head, [_h, targets, _t], tail] = splitTo3Part(state, first, last);
+  return [head, [_h, actionList.reduce((x) => doAction(y.fn), []), _t], tail];
   return actionList.reduce((stateOne, x) => {
     return x.reduce((_state, y) => {
       return doActionAtTarget(_state, [y.x, y.y], y.fn);
