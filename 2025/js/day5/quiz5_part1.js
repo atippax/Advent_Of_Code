@@ -45,7 +45,7 @@ const textTest = `3-5
 11
 17
 32`;
-const [rangeText, suspectText] = seperateListAndSpoiledItem(fileContent);
+const [rangeText, suspectText] = seperateListAndSpoiledItem(textTest);
 const suspecters = parseSuspect(suspectText);
 function isFreshInSomeOneRange(value, rangeTexts) {
   const ranges = rangeTexts.split("\n");
