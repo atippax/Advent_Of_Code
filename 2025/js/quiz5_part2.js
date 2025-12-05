@@ -1,13 +1,19 @@
-function trimLeft(thisRange, otherRange) {
+function trimLeft(rangeA, rangeB) {
   return {
-    from: thisRange.to + 1,
-    to: otherRange.to,
+    from: rangeA.to + 1,
+    to: rangeB.to,
   };
 }
-function trimRight(thisRange, otherRange) {
+function trimCenter(rangeA, rangeB) {
   return {
-    from: thisRange.from,
-    to: otherRange.from - 1,
+    from: rangeA.to + 1,
+    to: rangeB.from - 1,
+  };
+}
+function trimRight(rangeA, rangeB) {
+  return {
+    from: rangeA.from,
+    to: rangeB.from - 1,
   };
 }
 function findNewExceptions(intercepts, newRange) {
@@ -40,72 +46,69 @@ function isThisRangeOverlapInLeftHandSideOtherRange(thisRange, otherRange) {
 function isThisRangeOverlapInRightHandSideOtherRange(thisRange, otherRange) {
   return thisRange.to > otherRange.from && thisRange.to < otherRange.to;
 }
-function isThisRangeHaveSomeOverlap(thisRange, otherRange) {
-  return (
-    isThisRangeSmallOrEqualOtherRange(thisRange, otherRange) ||
-    isThisRangeBiggerThanOtherRange(thisRange, otherRange) ||
-    isThisRangeOverlapInLeftHandSideOtherRange(thisRange, otherRange) ||
-    isThisRangeOverlapInRightHandSideOtherRange(thisRange, otherRange)
-  );
-}
-function mergeRange(oldRange, newRange) {
-  if (newRange.to < oldRange.from) {
-    return {
-      from: Math.min(oldRange.from, newRange.from),
-      exceptions: [
-        ...oldRange.exceptions,
-        ...newRange.exceptions,
-        { from: newRange.to + 1, to: oldRange.from - 1 },
-      ],
-      to: Math.max(oldRange.to, newRange.to),
-    };
-  }
-  if (newRange.from > oldRange.to) {
-    return {
-      from: Math.min(oldRange.from, newRange.from),
-      exceptions: [
-        ...oldRange.exceptions,
-        ...newRange.exceptions,
-        { from: oldRange.to + 1, to: newRange.from - 1 },
-      ],
-      to: Math.max(oldRange.to, newRange.to),
-    };
-  }
-
-  const rangeProblems = oldRange.exceptions.filter((exception) => {
-    return isThisRangeHaveSomeOverlap(newRange, exception);
-  });
-  if (rangeProblems.length == 0) {
-    return {
-      from: Math.min(oldRange.from, newRange.from),
-      exceptions: mergeList(oldRange.exceptions, newRange.exceptions),
-      to: Math.max(oldRange.to, newRange.to),
-    };
-  }
-  const exceptionWithOutNewRange = oldRange.exceptions.filter(
-    (x) => !rangeProblems.some((s) => s.from == x.from && s.to == x.to)
-  );
-  const newExceptions = findNewExceptions(rangeProblems, newRange);
-  return {
-    from: Math.min(oldRange.from, newRange.from),
-    exceptions: mergeList(exceptionWithOutNewRange, newExceptions),
-    to: Math.max(oldRange.to, newRange.to),
+function isThisRangeEqualOtherRange(thisRange) {
+  return function (otherRange) {
+    return thisRange.to == otherRange.to && thisRange.from == otherRange.from;
   };
 }
-function mergeList(a, b) {
-  return [...a, ...b];
+function isThisRangeHaveSomeOverlap(thisRange) {
+  return function (otherRange) {
+    return (
+      isThisRangeSmallOrEqualOtherRange(thisRange, otherRange) ||
+      isThisRangeBiggerThanOtherRange(thisRange, otherRange) ||
+      isThisRangeOverlapInLeftHandSideOtherRange(thisRange, otherRange) ||
+      isThisRangeOverlapInRightHandSideOtherRange(thisRange, otherRange)
+    );
+  };
 }
-function sortRange(range1, range2) {
-  if (range1.from < range2.from) {
-    return [range1, range2];
-  }
-  if (range1.from == range2.from) {
-    if (range1.to < range2.to) {
-      return [range1, range2];
-    }
-  }
-  return [range2, range1];
+
+function mergeRangeAndException(range, otherRange) {
+  return {
+    from: Math.min(range.from, otherRange.from),
+    exceptions: mergeList(range.exceptions, otherRange.exceptions),
+    to: Math.max(range.to, otherRange.to),
+  };
 }
+
+function mergeRange(oldRange, newRange) {
+  const mergeToRange = mergeRangeAndException(oldRange, newRange);
+  if (newRange.to < oldRange.from)
+    return {
+      ...mergeToRange,
+      exceptions: mergeList(mergeToRange.exceptions, [
+        trimCenter(newRange, oldRange),
+        // { from: newRange.to + 1, to: oldRange.from - 1 },
+      ]),
+    };
+
+  if (newRange.from > oldRange.to)
+    return {
+      ...mergeToRange,
+      exceptions: mergeList(mergeToRange.exceptions, [
+        trimCenter(oldRange, newRange),
+      ]),
+    };
+
+  const rangeProblems = oldRange.exceptions.filter(
+    isThisRangeHaveSomeOverlap(newRange)
+  );
+  if (rangeProblems.length == 0) return mergeToRange;
+
+  const exceptionWithOutNewRange = oldRange.exceptions.filter(
+    (x) => !rangeProblems.some(isThisRangeEqualOtherRange(x))
+  );
+  return {
+    ...mergeToRange,
+    exceptions: mergeList(
+      exceptionWithOutNewRange,
+      findNewExceptions(rangeProblems, newRange)
+    ),
+  };
+}
+function mergeList(...a) {
+  return a.flat();
+}
+
 function isHasRangeSymbol(text) {
   return text.includes("-");
 }
@@ -127,12 +130,8 @@ function seperateListAndSpoiledItem(text) {
 function getRange(text) {
   return text.split("-").map((x) => parseInt(x));
 }
-function solve(text) {
-  const ranges = text
-    .split("\n")
-    .map((x) => x.trim())
-    .filter((x) => x != "");
-  const mapRoTange = ranges.map((x) => {
+function formatRangeAddEmptyException(ranges) {
+  return ranges.map((x) => {
     const [from, to] = getRange(x);
     return {
       from,
@@ -140,12 +139,21 @@ function solve(text) {
       exceptions: [],
     };
   });
-  // function merging()
-  const result = mapRoTange.reduce(
+}
+function splitRange(text) {
+  return text
+    .split("\n")
+    .map((x) => x.trim())
+    .filter((x) => x != "");
+}
+function mergeAllRange(ranges) {
+  return ranges.reduce(
     (range1, range2) => mergeRange(range1, range2),
-    mapRoTange[0]
+    ranges[0]
   );
-  return result;
+}
+function solve(text) {
+  return mergeAllRange(formatRangeAddEmptyException(splitRange(text)));
 }
 function countRange(range) {
   const COUNT_IT_SELF = 1;
@@ -158,7 +166,7 @@ function countException(exceptions) {
     START_COUNTER
   );
 }
-function countAllFreshIngredient(range) {
+function countAllRangeAndExceptions(range) {
   return countRange(range) - countException(range.exceptions);
 }
 const fs = require("fs");
@@ -166,4 +174,4 @@ const filePath = "../quiz/day_5/input.txt";
 const fileContent = fs.readFileSync(filePath, "utf-8");
 const [rangeText] = seperateListAndSpoiledItem(fileContent);
 const result = solve(rangeText);
-console.log(countAllFreshIngredient(result));
+console.log(countAllRangeAndExceptions(result));
