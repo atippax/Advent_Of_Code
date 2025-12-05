@@ -1,15 +1,3 @@
-const { count } = require("console");
-
-const text = `..@@.@@@@.
-@@@.@.@.@@
-@@@@@.@.@@
-@.@@@@..@.
-@@.@@@@.@@
-.@@@@@@@.@
-.@.@.@.@@@
-@.@@@.@@@@
-.@@@@@@@@.
-@.@.@@@.@.`;
 function createToArray(text) {
   return text.split("\n").reduce((arr, x) => {
     return [
@@ -53,52 +41,26 @@ function getCountPaperAtThisAdjectcy(state, position) {
   }, 0);
 }
 
-const fs = require("fs");
-const { emitWarning } = require("process");
-const filePath = "../quiz/day_4/input.txt";
-const fileContent = fs.readFileSync(filePath, "utf-8");
-// function
-function readRemove(state) {
-  return state.reduce((acc, x) => {
-    return x.reduce((_acc, y) => (y == "x" ? _acc + 1 : _acc), acc);
-  }, 0);
-}
-function clearSymbol(state) {
+function removeMakedPosition(state) {
   return state.reduce((acc, x) => {
     return [...acc, x.reduce((_acc, y) => [..._acc, y == "x" ? "." : y], [])];
   }, []);
 }
-const map = createToArray(fileContent);
-// console.table(map);
+function markPositionPaperHasMoved(state) {
+  return state.map((y) => y.map((x) => (isPaperCanMove(x) ? "x" : x.symbol)));
+}
 function tryToRemoveUntilNotSomethingChange(oldState) {
-  const newState = oldState
-    .reduce((sum, x, indexY) => {
-      return [
-        ...sum,
-        x.reduce((xumY, y, indexX) => {
-          const count = getCountPaperAtThisAdjectcy(oldState, [indexX, indexY]);
-          return [...xumY, { indexY, indexX, symbol: y, count }];
-        }, []),
-      ];
-    }, [])
-    .map((y) =>
-      y.map((x) => (x.count < 4 && x.symbol == "@" ? "x" : x.symbol))
-    );
-  const stateReadyToUse = clearSymbol(newState);
-  //   console.log(readRemove(newState));
-  console.table(stateReadyToUse);
-  //   console.table(newState);
-  //   console.table(oldState);
-  const isEqual = isEqualState(stateReadyToUse, oldState);
-  console.log("eq", isEqual);
-  if (!isEqualState(stateReadyToUse, oldState)) {
+  const newState = markPositionPaperHasMoved(
+    addCounterEachPaperInState(oldState)
+  );
+  const removedMakedState = removeMakedPosition(newState);
+  if (!isEqualState(removedMakedState, oldState)) {
     return (
-      readRemove(newState) + tryToRemoveUntilNotSomethingChange(stateReadyToUse)
+      countItemWantToRemove(newState, isMarkedPosition) +
+      tryToRemoveUntilNotSomethingChange(removedMakedState)
     );
   }
-  return readRemove(newState);
-  //   console.log(newState);
-  //   console.log();
+  return countItemWantToRemove(newState, isMarkedPosition);
 }
 function compareRow(rowNew, rowOld) {
   if (rowNew.length == 0 && rowOld.length == 0) return true;
@@ -114,33 +76,52 @@ function isEqualState(newState, oldState) {
   if (!compareRow(rowNew, rowOld)) return false;
   return isEqualState(otherRowNew, otherRowOld);
 }
+function addCounterEachPaperInState(state) {
+  return state.reduce((sum, x, indexY) => {
+    return [
+      ...sum,
+      x.reduce((xumY, symbol, indexX) => {
+        const count = getCountPaperAtThisAdjectcy(state, [indexX, indexY]);
+        return [...xumY, { indexY, indexX, symbol, count }];
+      }, []),
+    ];
+  }, []);
+}
+function isPaperCanMove(state) {
+  return state.symbol == "@" && state.count < 4;
+}
+function countItemWantToRemove(state, fn) {
+  return state.reduce((acc, x) => {
+    return x.reduce((_acc, y) => (fn(y) ? _acc + 1 : _acc), acc);
+  }, 0);
+}
+const isMarkedPosition = (y) => y == "x";
+const paperHasMorethanFour = (state) => isPaperCanMove(state);
+
+function countPaperHasRemoved(state) {
+  return state.reduce((acc, x) => {
+    return x.reduce((_acc, y) => (y == "x" ? _acc + 1 : _acc), acc);
+  }, 0);
+}
+function countPaperHasMoved(state) {
+  return countItemWantToRemove(state, paperHasMorethanFour);
+}
+const fs = require("fs");
+const filePath = "../quiz/day_4/input.txt";
+const fileContent = fs.readFileSync(filePath, "utf-8");
+const text = `..@@.@@@@.
+@@@.@.@.@@
+@@@@@.@.@@
+@.@@@@..@.
+@@.@@@@.@@
+.@@@@@@@.@
+.@.@.@.@@@
+@.@@@.@@@@
+.@@@@@@@@.
+@.@.@@@.@.`;
+
+const map = createToArray(fileContent);
+//solvepart1
 console.log(tryToRemoveUntilNotSomethingChange(map));
-return;
-console.log(
-  map
-    .reduce((sum, x, indexY) => {
-      return [
-        ...sum,
-        x.reduce((xumY, y, indexX) => {
-          const count = getCountPaperAtThisAdjectcy(map, [indexX, indexY]);
-          return [...xumY, { indexY, indexX, y, count }];
-          //   if (count < 4) {
-          // return 1 + xumY;
-          //   }
-          //   return xumY;
-        }, []),
-      ];
-    }, [])
-    // .map((y) => y.map((x) => (x.count <= 4 && x.y == "@" ? "x" : x.y)))
-    // .join("\n")
-
-    .reduce((acc, x) => {
-      return x.reduce(
-        (_acc, y) => (y.y == "@" && y.count < 4 ? _acc + 1 : _acc),
-        acc
-      );
-    }, 0)
-);
-
-// console.log(getCountPaperAtThisAdjectcy(map, [0, 0]));
-// console.log([1, 1, 2][-2]);
+//solvepart2
+console.log(countPaperHasMoved(addCounterEachPaperInState(map)));
