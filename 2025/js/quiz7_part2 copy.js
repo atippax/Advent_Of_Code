@@ -60,9 +60,7 @@ function solve(text) {
           ...remainNotSplited, //   ...splitIndexes.filter((x) => !indexes.some((s) => s == x)),
         ].sort((x, y) => x - y);
         const body = seperateLaser(newIndexed, line);
-        if (splitForm.includes(4)) {
-          console.log("asdasd");
-        }
+
         if (logs.length != 0) {
           const notFoundSpliter = logs[logs.length - 1].reduce((state, cur) => {
             const t = splitForm.filter((x) => cur.splits.some((s) => s == x));
@@ -76,15 +74,7 @@ function solve(text) {
               ];
             }
             return state;
-            // const notSplit = splitForm.reduce((a, i) => {
-            //   if (cur.splits.every((s) => s == i)) {
-            //     return [...a, { findIndex: cur.findIndex, splits: [i] }];
-            //   }
-            //   return a;
-            // }, []);
-            // return [...state, ...notSplit];
           }, []);
-          console.log("s"), notFoundSpliter;
           return {
             newLines: `${newLines}\n${body}`,
             splitIndexes: newIndexed,
@@ -178,7 +168,7 @@ const fileContent = fs.readFileSync(filePath, "utf-8");
 // https://adventofcode.com/2025/day/7#part2
 // hiimjasmine00 December 7, 2025 3:17am (03:17-05:00) EST
 
-const input = testText
+const input = fileContent
   .replace(/\r/g, "")
   .split("\n")
   .filter((x) => x.length > 0)
@@ -258,7 +248,7 @@ const logs = [
   //   { findIndex: 13, splits: [12, 14] },
   // ],
 ];
-const t = solve(fileContent);
+// const t = solve(testText);
 
 // const allPosible = t.logs.reduce((state, logs) => {
 //   const p = logs.reduce((state, log) => {
@@ -354,17 +344,78 @@ function merging(logs, states = "") {
   return f(cts, rest);
 }
 
-console.log(t.logs.length);
-console.log(split);
-const allPos = merging(t.logs)[0];
-const filter = allPos.reduce((x, t) => {
-  if (x.includes(t)) {
-    return x;
-  }
-  return [...x, t];
-}, []);
-console.log(allPos.length);
-console.log(filter.length);
+// console.log(t.logs.length);
+// console.log(t.logs);
+// console.log(split.length);
+// console.log(Object.keys(outputs).length);
+// const allPos = merging(t.logs)[0];
+// const filter = allPos.reduce((x, t) => {
+//   if (x.includes(t)) {
+//     return x;
+//   }
+//   return [...x, t];
+// }, []);
+// console.log(allPos.length);
+// console.log(filter.length);
 
 // console.log(logs);
 // console.log(m(makeConnections(logs[2]), logs[3]));
+function lineSpliter(text) {
+  return text.split("\n").filter((x) => x.trim() != "");
+}
+function findStartIndex(text) {
+  if (text.length == 0) return null;
+  const [char, ...rest] = text;
+  if (char == "S") return 0;
+  return 1 + findStartIndex(rest.join(""));
+}
+function headAndBody(lines) {
+  const [head, ...body] = lines;
+  return [head, body];
+}
+
+function isBeamSpliter(char) {
+  return char == "^";
+}
+function readCharAtIndex(text, index) {
+  return text.slice(index, index + 1);
+}
+
+function splitingBeam(x, y, lines, caches = {}) {
+  const key = `${x},${y}`;
+  if (caches[key] != undefined) return caches;
+  if (lines.length == 0) return caches;
+  const [head, rest] = headAndBody(lines);
+  const char = readCharAtIndex(head, x);
+  if (rest.length == 0) {
+    return {
+      ...caches,
+      [`${x},${y}`]: 1,
+    };
+  }
+  if (isBeamSpliter(char)) {
+    const rightKey = `${x + 1},${y + 1}`;
+    const leftKey = `${x - 1},${y + 1}`;
+    const left = splitingBeam(x - 1, y + 1, rest, caches);
+    const right = splitingBeam(x + 1, y + 1, rest, left);
+    return {
+      ...caches,
+      ...left,
+      ...right,
+      [key]: right[leftKey] + right[rightKey],
+    };
+  }
+  const childCaches = splitingBeam(x, y + 1, rest, caches);
+  return { ...childCaches, [key]: childCaches[`${x},${y + 1}`] };
+}
+const lines = lineSpliter(fileContent);
+const [head, body] = headAndBody(lines);
+const indexStarter = findStartIndex(head);
+solve(fileContent);
+console.log("calculating all possible . . .  ");
+const caches = splitingBeam(indexStarter, 0, body);
+console.log(caches);
+console.log(
+  "all possible with 1 beam : ",
+  Object.values(caches)[Object.values(caches).length - 1]
+);

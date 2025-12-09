@@ -115,4 +115,4 @@ const testText = `
 const fs = require("fs");
 const filePath = "../quiz/day_7/input.txt";
 const fileContent = fs.readFileSync(filePath, "utf-8");
-console.log(solve(testText));
+console.log(solve(fileContent));
